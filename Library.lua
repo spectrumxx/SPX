@@ -576,8 +576,8 @@ function WindowClass:_createFloatingButton()
         return
     end
 
-    local size = cfg.Size or 54
-    local cornerScale = 0.15
+    local size = cfg.Size or 34
+    local cornerScale = 0.20
 
     -- Posição: centro da tela, bem pra esquerda
     local holder = New("Frame", {
@@ -595,7 +595,7 @@ function WindowClass:_createFloatingButton()
         Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.fromOffset(size + 14, size + 14),
         BackgroundColor3 = self.Theme.Primary,
-        BackgroundTransparency = 0.8
+        BackgroundTransparency = 1
     })
     -- Corner igual ao botão, não circular
     New("UICorner", {
@@ -641,7 +641,7 @@ function WindowClass:_createFloatingButton()
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.fromOffset(math.floor(size * 0.45), math.floor(size * 0.45)),
+            Size = UDim2.fromOffset(math.floor(size * 0.90), math.floor(size * 0.90)),
             Image = resolvedIcon,
             ImageColor3 = self.Theme.Text
         })
@@ -729,7 +729,7 @@ function WindowClass:_createResizeHandle()
         Parent = grip,
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
-        Text = "⋰",
+        Text = "X",
         Font = Enum.Font.GothamBold,
         TextColor3 = self.Theme.TextDim,
         TextSize = 14
