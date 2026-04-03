@@ -579,7 +579,7 @@ function WindowClass:_createFloatingButton()
     end
 
     local size = cfg.Size or 34
-    local cornerScale = 0.20
+    local cornerScale = 0.30
 
     -- Posição: centro da tela, bem pra esquerda
     local holder = New("Frame", {
