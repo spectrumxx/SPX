@@ -586,7 +586,7 @@ function WindowClass:_createFloatingButton()
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 18, 0.5, 0),
-        Size = UDim2.fromOffset(size + 24, size + 24)
+        Size = UDim2.fromOffset(size + 14, size + 14)
     })
 
     local glow = New("Frame", {
