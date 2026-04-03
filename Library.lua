@@ -44,18 +44,16 @@ local Themes = {
     }
 }
 
--- Tenta carregar o módulo de ícones Lucide do mesmo repositório
-local Icons = nil
+-- Carrega ícones Lucide do mesmo repositório via HttpGet
+local LucideAssets = {}
 pcall(function()
-    Icons = require(script.Parent.Icons)
+    local raw = loadstring(game:HttpGet(
+        "https://raw.githubusercontent.com/spectrumxx/SPX/refs/heads/main/Icons.lua"
+    ))()
+    if raw and raw.assets then
+        LucideAssets = raw.assets
+    end
 end)
-if not Icons then
-    pcall(function()
-        Icons = loadstring(game:HttpGet("rbxassetid://Icons"))()
-    end)
-end
--- Fallback: tabela vazia (sem crash)
-local LucideAssets = (Icons and Icons.assets) or {}
 
 local IconMap = {
     home = "⌂",
@@ -599,7 +597,11 @@ function WindowClass:_createFloatingButton()
         BackgroundColor3 = self.Theme.Primary,
         BackgroundTransparency = 0.8
     })
-    MakeCorner(glow, 999)
+    -- Corner igual ao botão, não circular
+    New("UICorner", {
+        Parent = glow,
+        CornerRadius = UDim.new(cornerScale, 0)
+    })
     local glowStroke = MakeStroke(glow, self.Theme.Primary, 1.2, 0.5)
 
     local buttonFrame = New("Frame", {
@@ -609,21 +611,12 @@ function WindowClass:_createFloatingButton()
         Size = UDim2.fromOffset(size, size),
         BackgroundColor3 = self.Theme.SurfaceAlt
     })
-    -- Corner arredondado mas não muito: scale 0.15
     New("UICorner", {
         Parent = buttonFrame,
         CornerRadius = UDim.new(cornerScale, 0)
     })
     MakeGradient(buttonFrame, self.Theme.SurfaceAlt, self.Theme.Surface, 90)
     local stroke = MakeStroke(buttonFrame, self.Theme.Primary, 1.1, 0)
-
-    -- Glow também com corner consistente
-    New("UICorner", {
-        Parent = glow,
-        CornerRadius = UDim.new(cornerScale, 0)
-    })
-    -- Remove o corner circular que foi criado pelo MakeCorner(glow, 999) acima
-    -- (o UICorner já foi sobrescrito pela linha acima, funciona)
 
     local scale = New("UIScale", {
         Parent = buttonFrame,
