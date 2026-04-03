@@ -2174,7 +2174,7 @@ function Library:CreateWindow(options)
     local defaultConfig = {
         Title = "SpectrumX",
         Subtitle = "",
-        Icon = "panel",
+        Icon = "lucide-spectrumx",
         Size = UDim2.fromOffset(550, 600),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         TabWidth = 160,
