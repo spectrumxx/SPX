@@ -604,7 +604,6 @@ function WindowClass:_createFloatingButton()
         Parent = glow,
         CornerRadius = UDim.new(cornerScale, 0)
     })
-    local glowStroke = MakeStroke(glow, self.Theme.Primary, 1.2, 0.5)
 
     local buttonFrame = New("Frame", {
         Parent = holder,
@@ -665,15 +664,13 @@ function WindowClass:_createFloatingButton()
 
     button.MouseEnter:Connect(function()
         Tween(scale, 0.14, {Scale = 1.08})
-        Tween(glow, 0.14, {BackgroundTransparency = 0.68})
-        Tween(glowStroke, 0.14, {Transparency = 0.25})
+        Tween(glow, 0.14, {BackgroundTransparency = 0.75})
         Tween(stroke, 0.14, {Transparency = 0})
     end)
 
     button.MouseLeave:Connect(function()
         Tween(scale, 0.14, {Scale = 1})
         Tween(glow, 0.14, {BackgroundTransparency = 1})
-        Tween(glowStroke, 0.14, {Transparency = 0.5})
         Tween(stroke, 0.14, {Transparency = 0.6})
     end)
 
@@ -681,23 +678,17 @@ function WindowClass:_createFloatingButton()
         self:Toggle()
     end)
 
-    -- Sempre arrastável, funciona em mobile (Touch) e desktop (Mouse)
+    -- Drag: usa o button (TextButton) pra capturar Touch/Mouse corretamente
     local dragging = false
     local dragStart = nil
     local holderStartPos = nil
 
-    buttonFrame.InputBegan:Connect(function(input)
+    button.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             holderStartPos = holder.Position
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
         end
     end)
 
@@ -715,6 +706,13 @@ function WindowClass:_createFloatingButton()
         )
     end)
 
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
     self.FloatingButton = holder
 end
 
@@ -729,15 +727,32 @@ function WindowClass:_createResizeHandle()
         ZIndex = 10
     })
 
-    local lines = New("TextLabel", {
-        Parent = grip,
-        BackgroundTransparency = 1,
-        Size = UDim2.fromScale(1, 1),
-        Text = "X",
-        Font = Enum.Font.GothamBold,
-        TextColor3 = self.Theme.TextDim,
-        TextSize = 14
-    })
+    local resolvedGrip = ResolveIcon("grip-corner-bottom-right")
+        or ResolveIcon("corner-bottom-right")
+        or ResolveIcon("move")
+
+    if resolvedGrip and IsImageIcon(resolvedGrip) then
+        New("ImageLabel", {
+            Parent = grip,
+            BackgroundTransparency = 1,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.fromOffset(14, 14),
+            Image = resolvedGrip,
+            ImageColor3 = self.Theme.TextDim
+        })
+    else
+        -- fallback: ícone unicode de canto
+        New("TextLabel", {
+            Parent = grip,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromScale(1, 1),
+            Text = "⌟",
+            Font = Enum.Font.GothamBold,
+            TextColor3 = self.Theme.TextDim,
+            TextSize = 14
+        })
+    end
 
     local resizing = false
     local startPos
@@ -1448,18 +1463,21 @@ function SectionClass:AddDropdown(options)
     })
     MakeCorner(dropdownHolder, 10)
     MakeStroke(dropdownHolder, theme.Border, 1, 0)
-    MakePadding(dropdownHolder, 8, 8, 8, 8)
+    MakePadding(dropdownHolder, 6, 6, 6, 6)
 
     local searchBox
     local searchText = ""
 
-    if options.Search then
+    -- Multi sempre tem search por padrão, ou se explicitamente pedido
+    local hasSearch = options.Search or (isMulti and options.Search ~= false)
+
+    if hasSearch then
         searchBox = New("TextBox", {
             Parent = dropdownHolder,
             BackgroundColor3 = theme.SurfaceAlt,
             Size = UDim2.new(1, 0, 0, 30),
             Text = "",
-            PlaceholderText = "Search...",
+            PlaceholderText = "Pesquisar...",
             ClearTextOnFocus = false,
             Font = Enum.Font.Gotham,
             TextSize = 12,
@@ -1475,7 +1493,7 @@ function SectionClass:AddDropdown(options)
         Parent = dropdownHolder,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Position = UDim2.fromOffset(0, options.Search and 38 or 0),
+        Position = UDim2.fromOffset(0, hasSearch and 36 or 0),
         Size = UDim2.new(1, 0, 0, 0),
         CanvasSize = UDim2.new(),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -1562,7 +1580,7 @@ function SectionClass:AddDropdown(options)
                 local item = New("Frame", {
                     Parent = listFrame,
                     BackgroundColor3 = theme.SurfaceAlt,
-                    Size = UDim2.new(1, 0, 0, 32)
+                    Size = UDim2.new(1, -4, 0, 30)
                 })
                 MakeCorner(item, 8)
                 local itemStroke = MakeStroke(item, theme.Border, 1, 0)
@@ -1630,7 +1648,6 @@ function SectionClass:AddDropdown(options)
                     rebuild()
 
                     if not isMulti then
-                        local totalHeight = options.Search and 38 or 0
                         dropdownHolder.Visible = true
                         Tween(dropdownHolder, 0.18, {Size = UDim2.new(1, 0, 0, 0)})
                         Tween(arrow, 0.18, {Rotation = 0})
@@ -1647,9 +1664,10 @@ function SectionClass:AddDropdown(options)
         end
 
         local maxVisible = math.min(visibleCount, 5)
-        local targetHeight = (options.Search and 38 or 0) + (maxVisible * 38)
+        local searchOffset = hasSearch and 38 or 0
+        local targetHeight = searchOffset + (maxVisible * 36)
 
-        listFrame.Size = UDim2.new(1, 0, 0, math.max(0, targetHeight - (options.Search and 38 or 0)))
+        listFrame.Size = UDim2.new(1, 0, 0, math.max(0, targetHeight - searchOffset))
     end
 
     local function setOpen(state)
@@ -1666,7 +1684,8 @@ function SectionClass:AddDropdown(options)
             end
 
             local maxVisible = math.min(visibleCount, 5)
-            local targetHeight = (options.Search and 38 or 0) + (maxVisible * 38)
+            local searchOffset = hasSearch and 38 or 0
+            local targetHeight = searchOffset + (maxVisible * 36) + 12 -- +12 padding top+bottom
 
             Tween(dropdownHolder, 0.18, {
                 Size = UDim2.new(1, 0, 0, targetHeight)
