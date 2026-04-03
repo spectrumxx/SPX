@@ -610,13 +610,14 @@ function WindowClass:_createFloatingButton()
         Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.fromOffset(size, size),
         BackgroundColor3 = self.Theme.SurfaceAlt
+        BackrgoundTransparency = 1
     })
     New("UICorner", {
         Parent = buttonFrame,
         CornerRadius = UDim.new(cornerScale, 0)
     })
     MakeGradient(buttonFrame, self.Theme.SurfaceAlt, self.Theme.Surface, 90)
-    local stroke = MakeStroke(buttonFrame, self.Theme.Primary, 1.1, 0)
+    local stroke = MakeStroke(buttonFrame, self.Theme.Primary, 0, 0)
 
     local scale = New("UIScale", {
         Parent = buttonFrame,
@@ -1876,7 +1877,7 @@ local function CreateWindowShell(window)
         titleIcon.Position = UDim2.new(0, 0, 0.5, -8)
     end
 
-    local titleX = titleIcon and 24 or 0
+    local titleX = titleIcon and 44 or 0
 
     local titleLabel = New("TextLabel", {
         Parent = titleBar,
@@ -1944,7 +1945,7 @@ local function CreateWindowShell(window)
         Parent = closeWrap,
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
-        Text = "✕",
+        Text = "X",
         Font = Enum.Font.GothamBold,
         TextSize = 12,
         TextColor3 = theme.TextMuted
@@ -2172,7 +2173,7 @@ function Library:CreateWindow(options)
     options = options or {}
 
     local defaultConfig = {
-        Title = "SpectrumX",
+        Title = "Spectrum X",
         Subtitle = "",
         Icon = "lucide-spectrumx",
         Size = UDim2.fromOffset(550, 600),
@@ -2186,7 +2187,7 @@ function Library:CreateWindow(options)
         Resizable = true,
         FloatingButton = {
             Enabled = true,
-            Icon = "settings",
+            Icon = "lucide-spectrumx",
             Size = 54
         }
     }
