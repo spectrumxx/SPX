@@ -510,6 +510,7 @@ function WindowClass:SetVisible(state)
 
     if state then
         self.Frame.Visible = true
+        if self.Shadow then self.Shadow.Visible = true end
         self.Scale.Scale = 0.97
         self.Frame.BackgroundTransparency = 0.15
         Tween(self.Scale, 0.18, {Scale = 1})
@@ -520,6 +521,7 @@ function WindowClass:SetVisible(state)
         tw1.Completed:Connect(function()
             if self.Visible == false and self.Frame then
                 self.Frame.Visible = false
+                if self.Shadow then self.Shadow.Visible = false end
             end
         end)
     end
@@ -610,14 +612,13 @@ function WindowClass:_createFloatingButton()
         Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.fromOffset(size, size),
         BackgroundColor3 = self.Theme.SurfaceAlt
-        BackrgoundTransparency = 1
     })
     New("UICorner", {
         Parent = buttonFrame,
         CornerRadius = UDim.new(cornerScale, 0)
     })
     MakeGradient(buttonFrame, self.Theme.SurfaceAlt, self.Theme.Surface, 90)
-    local stroke = MakeStroke(buttonFrame, self.Theme.Primary, 0, 0)
+    local stroke = MakeStroke(buttonFrame, self.Theme.Primary, 1, 0.6)
 
     local scale = New("UIScale", {
         Parent = buttonFrame,
@@ -666,12 +667,14 @@ function WindowClass:_createFloatingButton()
         Tween(scale, 0.14, {Scale = 1.08})
         Tween(glow, 0.14, {BackgroundTransparency = 0.68})
         Tween(glowStroke, 0.14, {Transparency = 0.25})
+        Tween(stroke, 0.14, {Transparency = 0})
     end)
 
     button.MouseLeave:Connect(function()
         Tween(scale, 0.14, {Scale = 1})
-        Tween(glow, 0.14, {BackgroundTransparency = 0.8})
+        Tween(glow, 0.14, {BackgroundTransparency = 1})
         Tween(glowStroke, 0.14, {Transparency = 0.5})
+        Tween(stroke, 0.14, {Transparency = 0.6})
     end)
 
     button.MouseButton1Click:Connect(function()
@@ -1748,6 +1751,12 @@ function SectionClass:AddDropdown(options)
     rebuild()
 
     return element
+end
+
+function SectionClass:AddMultiDropdown(options)
+    options = options or {}
+    options.Multi = true
+    return self:AddDropdown(options)
 end
 
 function TabClass:CreateSection(title)
