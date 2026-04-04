@@ -941,15 +941,39 @@ function SectionClass:AddLabel(options)
     end
     options = options or {}
 
+    local theme = self.Window.Theme
+    local labelType = string.lower(options.Type or "default")
+
+    -- Cores e ícones por tipo
+    local typeConfig = {
+        default  = { bg = theme.SurfaceAlt,                    border = theme.Border,   text = theme.TextMuted, bar = nil },
+        success  = { bg = Color3.fromRGB(20, 40, 26),          border = theme.Success,  text = theme.Success,   bar = theme.Success },
+        warning  = { bg = Color3.fromRGB(40, 30, 10),          border = theme.Warning,  text = theme.Warning,   bar = theme.Warning },
+        error    = { bg = Color3.fromRGB(40, 14, 14),          border = theme.Error,    text = theme.Error,     bar = theme.Error },
+        info     = { bg = Color3.fromRGB(14, 26, 48),          border = theme.Primary,  text = theme.Primary,   bar = theme.Primary },
+    }
+    local cfg = typeConfig[labelType] or typeConfig.default
+
     local frame = New("Frame", {
         Parent = self.Container,
-        BackgroundColor3 = self.Window.Theme.SurfaceAlt,
+        BackgroundColor3 = cfg.bg,
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y
     })
     MakeCorner(frame, 10)
-    MakeStroke(frame, self.Window.Theme.Border, 1, 0)
-    MakePadding(frame, 12, 12, 10, 10)
+    MakeStroke(frame, cfg.border, 1, labelType == "default" and 0 or 0.3)
+    MakePadding(frame, cfg.bar and 20 or 12, 12, 10, 10)
+
+    -- Barra lateral colorida (tipos não-default)
+    if cfg.bar then
+        local bar = New("Frame", {
+            Parent = frame,
+            BackgroundColor3 = cfg.bar,
+            Size = UDim2.new(0, 3, 1, 0),
+            Position = UDim2.fromOffset(0, 0)
+        })
+        MakeCorner(bar, 10)
+    end
 
     local label = New("TextLabel", {
         Parent = frame,
@@ -960,17 +984,23 @@ function SectionClass:AddLabel(options)
         Font = Enum.Font.Gotham,
         TextSize = 13,
         TextWrapped = true,
-        TextColor3 = self.Window.Theme.TextMuted,
+        TextColor3 = cfg.text,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Top
     })
 
-    return {
+    local element = {
         Instance = frame,
         SetText = function(_, text)
             label.Text = text
+        end,
+        SetType = function(_, newType)
+            local nc = typeConfig[string.lower(newType)] or typeConfig.default
+            frame.BackgroundColor3 = nc.bg
+            label.TextColor3 = nc.text
         end
     }
+    return element
 end
 
 function SectionClass:AddButton(options)
@@ -2193,7 +2223,7 @@ local function CreateWindowShell(window)
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -8, 0.5, 0),
         Size = UDim2.fromOffset(60, 22),
-        Text = window.Config.ToggleKey and tostring(window.Config.ToggleKey) or "None",
+        Text = window.Settings.ToggleKey and tostring(window.Settings.ToggleKey):gsub("Enum%.KeyCode%.", "") or "None",
         Font = Enum.Font.GothamSemibold,
         TextSize = 11,
         TextColor3 = theme.Primary
@@ -2209,15 +2239,21 @@ local function CreateWindowShell(window)
         keybindBtn.TextColor3 = theme.Warning
 
         local conn
-        conn = UserInputService.InputBegan:Connect(function(input, processed)
-            if processed then return end
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                window.Config.ToggleKey = input.KeyCode
-                keybindBtn.Text = tostring(input.KeyCode):gsub("Enum.KeyCode.", "")
-                keybindBtn.TextColor3 = theme.Primary
-                listeningForKey = false
-                conn:Disconnect()
-            end
+        conn = UserInputService.InputBegan:Connect(function(input)
+            -- ignora cliques de mouse, só teclas
+            if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+            -- ignora teclas de sistema que não fazem sentido como keybind
+            local ignored = {
+                [Enum.KeyCode.Unknown] = true,
+            }
+            if ignored[input.KeyCode] then return end
+
+            window.Settings.ToggleKey = input.KeyCode
+            local keyName = tostring(input.KeyCode):gsub("Enum%.KeyCode%.", "")
+            keybindBtn.Text = keyName
+            keybindBtn.TextColor3 = theme.Primary
+            listeningForKey = false
+            conn:Disconnect()
         end)
     end)
 
@@ -2242,7 +2278,6 @@ local function CreateWindowShell(window)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local floatHidden = false
     local floatToggleSwitch = New("Frame", {
         Parent = floatRow,
         AnchorPoint = Vector2.new(1, 0.5),
@@ -2269,17 +2304,16 @@ local function CreateWindowShell(window)
     })
 
     floatClick.MouseButton1Click:Connect(function()
-        floatHidden = not floatHidden
-        -- Atualiza switch visual
+        window.Settings.FloatHidden = not window.Settings.FloatHidden
+        local hidden = window.Settings.FloatHidden
         Tween(floatToggleSwitch, 0.16, {
-            BackgroundColor3 = floatHidden and theme.Primary or theme.SurfaceLight
+            BackgroundColor3 = hidden and theme.Primary or theme.SurfaceLight
         })
         Tween(floatKnob, 0.16, {
-            Position = floatHidden and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 2)
+            Position = hidden and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 2)
         })
-        -- Esconde/mostra o floating button
         if window.FloatingButton then
-            window.FloatingButton.Visible = not floatHidden
+            window.FloatingButton.Visible = not hidden
         end
     end)
 
@@ -2299,9 +2333,10 @@ local function CreateWindowShell(window)
     end)
 
     -- Keybind listener global
-    UserInputService.InputBegan:Connect(function(input, processed)
-        if processed then return end
-        if window.Config.ToggleKey and input.KeyCode == window.Config.ToggleKey then
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+        if listeningForKey then return end
+        if window.Settings.ToggleKey and input.KeyCode == window.Settings.ToggleKey then
             window:Toggle()
         end
     end)
@@ -2471,7 +2506,11 @@ function Library:CreateWindow(options)
         Tabs = {},
         SelectedTab = 1,
         Visible = true,
-        Breakpoint = "Desktop"
+        Breakpoint = "Desktop",
+        Settings = {
+            ToggleKey = config.ToggleKey or nil,
+            FloatHidden = false,
+        }
     }, WindowClass)
 
     CreateWindowShell(window)
