@@ -1,4 +1,3 @@
--- SPECTRUM X NEW LIBRARY
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -45,7 +44,7 @@ local Themes = {
     }
 }
 
--- Carrega ícones Lucide do mesmo repositório via HttpGet
+-- Carrega icones Lucide do mesmo repositorio via HttpGet
 local LucideAssets = {}
 pcall(function()
     local raw = loadstring(game:HttpGet(
@@ -57,23 +56,23 @@ pcall(function()
 end)
 
 local IconMap = {
-    home = "⌂",
-    settings = "⚙",
-    menu = "☰",
-    user = "👤",
-    search = "⌕",
-    bell = "🔔",
-    info = "ⓘ",
-    star = "★",
-    folder = "🗀",
-    shield = "🛡",
-    zap = "⚡",
-    play = "▶",
+    home = "[home]",
+    settings = "[cfg]",
+    menu = "[menu]",
+    user = "[user]",
+    search = "[search]",
+    bell = "[bell]",
+    info = "[i]",
+    star = "[star]",
+    folder = "[folder]",
+    shield = "[shield]",
+    zap = "[zap]",
+    play = "[play]",
     terminal = ">_",
-    grid = "☷",
-    sliders = "≡",
-    toolbox = "🧰",
-    panel = "▣"
+    grid = "[grid]",
+    sliders = "[eq]",
+    toolbox = "[tools]",
+    panel = "[panel]"
 }
 
 local function cloneTable(tbl)
@@ -164,18 +163,18 @@ local function ResolveIcon(icon)
     end
 
     if type(icon) == "string" then
-        -- Já é um assetid ou URL direto
+        -- Ja e um assetid ou URL direto
         if string.find(icon, "rbxassetid://") or string.find(icon, "http") then
             return icon
         end
 
         local lower = string.lower(icon)
 
-        -- Tenta achar no dicionário Lucide (ex: "lucide-star" ou só "star" com prefixo)
+        -- Tenta achar no dicionario Lucide (ex: "lucide-star" ou so "star" com prefixo)
         if LucideAssets[lower] then
             return LucideAssets[lower]
         end
-        -- Tenta com prefixo "lucide-" automático
+        -- Tenta com prefixo "lucide-" automatico
         if LucideAssets["lucide-" .. lower] then
             return LucideAssets["lucide-" .. lower]
         end
@@ -198,7 +197,7 @@ local function CreateIcon(parent, icon, color, size, posX)
         return nil
     end
 
-    -- Resolve primeiro (pode converter nome lucide → assetid)
+    -- Resolve primeiro (pode converter nome lucide -> assetid)
     local resolved = ResolveIcon(icon)
     if not resolved or resolved == "" then
         return nil
@@ -300,7 +299,7 @@ local function MakeDraggable(handle, target, callback)
         local rawX = startPos.X.Offset + delta.X
         local rawY = startPos.Y.Offset + delta.Y
 
-        -- Clamp: ancora em (0.5, 0.5), então offset é relativo ao centro
+        -- Clamp: ancora em (0.5, 0.5), entao offset e relativo ao centro
         local clampedX = math.clamp(rawX, -(vp.X / 2 - hw), vp.X / 2 - hw)
         local clampedY = math.clamp(rawY, -(vp.Y / 2 - hh), vp.Y / 2 - hh)
 
@@ -593,7 +592,7 @@ function WindowClass:_createFloatingButton()
     local size = cfg.Size or 34
     local cornerScale = 0.30
 
-    -- Posição: centro da tela, bem pra esquerda
+    -- Posicao: centro da tela, bem pra esquerda
     local holder = New("Frame", {
         Parent = self.Gui,
         Name = "FloatingButtonHolder",
@@ -611,7 +610,7 @@ function WindowClass:_createFloatingButton()
         BackgroundColor3 = self.Theme.Primary,
         BackgroundTransparency = 1
     })
-    -- Corner igual ao botão, não circular
+    -- Corner igual ao botao, nao circular
     New("UICorner", {
         Parent = glow,
         CornerRadius = UDim.new(cornerScale, 0)
@@ -643,7 +642,7 @@ function WindowClass:_createFloatingButton()
         Text = ""
     })
 
-    -- Suporte completo a ícone: lucide nome, assetid rbx, catálogo URL, emoji
+    -- Suporte completo a icone: lucide nome, assetid rbx, catalogo URL, emoji
     local iconSrc = cfg.Icon or "settings"
     local resolvedIcon = ResolveIcon(iconSrc)
     local fbIcon
@@ -764,12 +763,12 @@ function WindowClass:_createResizeHandle()
             ImageColor3 = self.Theme.TextDim
         })
     else
-        -- fallback: ícone unicode de canto
+        -- fallback: icone unicode de canto
         New("TextLabel", {
             Parent = grip,
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
-            Text = "⌟",
+            Text = "[grip]",
             Font = Enum.Font.GothamBold,
             TextColor3 = self.Theme.TextDim,
             TextSize = 14
@@ -968,7 +967,7 @@ function SectionClass:AddLabel(options)
     local theme = self.Window.Theme
     local labelType = string.lower(options.Type or "default")
 
-    -- Cores e ícones por tipo
+    -- Cores e icones por tipo
     local typeConfig = {
         default  = { bg = theme.SurfaceAlt,                    border = theme.Border,   text = theme.TextMuted, bar = nil },
         success  = { bg = Color3.fromRGB(20, 40, 26),          border = theme.Success,  text = theme.Success,   bar = theme.Success },
@@ -988,7 +987,7 @@ function SectionClass:AddLabel(options)
     MakeStroke(frame, cfg.border, 1, labelType == "default" and 0 or 0.3)
     MakePadding(frame, cfg.bar and 20 or 12, 12, 10, 10)
 
-    -- Barra lateral colorida (tipos não-default)
+    -- Barra lateral colorida (tipos nao-default)
     if cfg.bar then
         local bar = New("Frame", {
             Parent = frame,
@@ -1196,7 +1195,7 @@ function SectionClass:AddLabelToggle(options)
     MakeCorner(bg, 10)
     MakeStroke(bg, theme.Border, 1, 0)
 
-    -- Título do toggle (lado esquerdo, em cima)
+    -- Titulo do toggle (lado esquerdo, em cima)
     local titleLabel = New("TextLabel", {
         Parent = bg,
         BackgroundTransparency = 1,
@@ -1209,7 +1208,7 @@ function SectionClass:AddLabelToggle(options)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    -- Texto do label (lado esquerdo, embaixo do título)
+    -- Texto do label (lado esquerdo, embaixo do titulo)
     local labelText = New("TextLabel", {
         Parent = bg,
         BackgroundTransparency = 1,
@@ -1635,7 +1634,7 @@ function SectionClass:AddDropdown(options)
     local searchBox
     local searchText = ""
 
-    -- Multi sempre tem search por padrão, ou se explicitamente pedido
+    -- Multi sempre tem search por padrao, ou se explicitamente pedido
     local hasSearch = options.Search or (isMulti and options.Search ~= false)
 
     if hasSearch then
@@ -1766,7 +1765,7 @@ function SectionClass:AddDropdown(options)
                     BackgroundTransparency = 1,
                     Position = UDim2.fromOffset(10, 0),
                     Size = UDim2.fromOffset(18, 32),
-                    Text = selectedState and "✓" or "",
+                    Text = selectedState and "v" or "",
                     Font = Enum.Font.GothamBold,
                     TextSize = 13,
                     TextColor3 = theme.Primary,
@@ -2111,7 +2110,7 @@ local function CreateWindowShell(window)
     controlsList.HorizontalAlignment = Enum.HorizontalAlignment.Right
     controlsList.VerticalAlignment = Enum.VerticalAlignment.Center
 
-    -- Botão de settings
+    -- Botao de settings
     local settingsWrap = New("Frame", {
         Parent = controls,
         BackgroundColor3 = theme.SurfaceAlt,
@@ -2142,7 +2141,7 @@ local function CreateWindowShell(window)
             Parent = settingsWrap,
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
-            Text = "⚙",
+            Text = "[cfg]",
             Font = Enum.Font.GothamBold,
             TextSize = 13,
             TextColor3 = theme.TextMuted
@@ -2161,7 +2160,7 @@ local function CreateWindowShell(window)
         Parent = minimizeWrap,
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
-        Text = "—",
+        Text = "-",
         Font = Enum.Font.GothamBold,
         TextSize = 14,
         TextColor3 = theme.TextMuted
@@ -2283,7 +2282,7 @@ local function CreateWindowShell(window)
         Tween(closeWrap, 0.14, {BackgroundColor3 = theme.SurfaceAlt})
     end)
 
-    -- Painel de configurações da UI
+    -- Painel de configuracoes da UI
     local settingsPanel = New("Frame", {
         Parent = frame,
         BackgroundColor3 = theme.Surface,
@@ -2316,12 +2315,12 @@ local function CreateWindowShell(window)
 
     local panelList = MakeList(settingsPanel, Enum.FillDirection.Vertical, 8)
 
-    -- Título do painel
+    -- Titulo do painel
     New("TextLabel", {
         Parent = settingsPanel,
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 16),
-        Text = "Configurações",
+        Text = "Configuracoes",
         Font = Enum.Font.GothamSemibold,
         TextSize = 13,
         TextColor3 = theme.TextDim,
@@ -2380,9 +2379,9 @@ local function CreateWindowShell(window)
 
         local conn
         conn = UserInputService.InputBegan:Connect(function(input)
-            -- ignora cliques de mouse, só teclas
+            -- ignora cliques de mouse, so teclas
             if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-            -- ignora teclas de sistema que não fazem sentido como keybind
+            -- ignora teclas de sistema que nao fazem sentido como keybind
             local ignored = {
                 [Enum.KeyCode.Unknown] = true,
             }
@@ -2457,7 +2456,7 @@ local function CreateWindowShell(window)
         end
     end)
 
-    -- Row: Transparência da UI
+    -- Row: Transparencia da UI
     local alphaRow = New("Frame", {
         Parent = settingsPanel,
         BackgroundColor3 = theme.SurfaceAlt,
@@ -2471,7 +2470,7 @@ local function CreateWindowShell(window)
         BackgroundTransparency = 1,
         Position = UDim2.fromOffset(10, 6),
         Size = UDim2.new(1, -60, 0, 14),
-        Text = "Transparência",
+        Text = "Transparencia",
         Font = Enum.Font.GothamMedium,
         TextSize = 12,
         TextColor3 = theme.Text,
