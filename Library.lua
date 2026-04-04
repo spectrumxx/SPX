@@ -1741,7 +1741,7 @@ function SectionClass:AddDropdown(options)
 
         for _, value in ipairs(values) do
             if isVisibleOption(value) then
-                visibleCount += 1
+                visibleCount = visibleCount + 1
 
                 local item = New("Frame", {
                     Parent = listFrame,
@@ -1845,7 +1845,7 @@ function SectionClass:AddDropdown(options)
             local visibleCount = 0
             for _, value in ipairs(values) do
                 if isVisibleOption(value) then
-                    visibleCount += 1
+                    visibleCount = visibleCount + 1
                 end
             end
 
