@@ -519,16 +519,18 @@ end
 function WindowClass:SetVisible(state)
     self.Visible = state
 
+    local savedAlpha = (self.Settings and self.Settings.Transparency) or 0.05
+
     if state then
         self.Frame.Visible = true
         if self.Shadow then self.Shadow.Visible = true end
         self.Scale.Scale = 0.97
-        self.Frame.BackgroundTransparency = 0.15
+        self.Frame.BackgroundTransparency = savedAlpha + 0.1
         Tween(self.Scale, 0.18, {Scale = 1})
-        Tween(self.Frame, 0.18, {BackgroundTransparency = 0.05})
+        Tween(self.Frame, 0.18, {BackgroundTransparency = savedAlpha})
     else
         local tw1 = Tween(self.Scale, 0.16, {Scale = 0.97})
-        Tween(self.Frame, 0.16, {BackgroundTransparency = 0.2})
+        Tween(self.Frame, 0.16, {BackgroundTransparency = math.min(savedAlpha + 0.15, 1)})
         tw1.Completed:Connect(function()
             if self.Visible == false and self.Frame then
                 self.Frame.Visible = false
@@ -985,7 +987,7 @@ function SectionClass:AddLabel(options)
     })
     MakeCorner(frame, 10)
     MakeStroke(frame, cfg.border, 1, labelType == "default" and 0 or 0.3)
-    MakePadding(frame, cfg.bar and 20 or 12, 12, 10, 10)
+    MakePadding(frame, cfg.bar and 26 or 12, 12, 10, 10)
 
     -- Barra lateral colorida (tipos não-default)
     if cfg.bar then
@@ -1183,47 +1185,67 @@ function SectionClass:AddLabelToggle(options)
     local theme = self.Window.Theme
     local state = options.Default == true
     local changed = CreateSignal()
+    local labelType = string.lower(options.Type or "default")
 
-    -- Altura maior pra acomodar o label
-    local frame = self:_createElement(56)
+    local typeConfig = {
+        default = { bg = theme.SurfaceAlt, border = theme.Border,   labelColor = theme.TextDim  },
+        success = { bg = theme.SurfaceAlt, border = theme.Success,  labelColor = theme.Success  },
+        warning = { bg = theme.SurfaceAlt, border = theme.Warning,  labelColor = theme.Warning  },
+        error   = { bg = theme.SurfaceAlt, border = theme.Error,    labelColor = theme.Error    },
+        info    = { bg = theme.SurfaceAlt, border = theme.Primary,  labelColor = theme.Primary  },
+    }
+    local cfg = typeConfig[labelType] or typeConfig.default
+
+    local frame = self:_createElement(42)
 
     local bg = New("Frame", {
         Parent = frame,
-        BackgroundColor3 = theme.SurfaceAlt,
+        BackgroundColor3 = cfg.bg,
         Size = UDim2.fromScale(1, 1)
     })
     MakeCorner(bg, 10)
-    MakeStroke(bg, theme.Border, 1, 0)
+    local bgStroke = MakeStroke(bg, cfg.border, 1, labelType == "default" and 0 or 0.4)
 
-    -- Título do toggle (lado esquerdo, em cima)
+    -- Toggle title (esquerda)
     local titleLabel = New("TextLabel", {
         Parent = bg,
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(12, 7),
-        Size = UDim2.new(1, -70, 0, 16),
+        Position = UDim2.fromOffset(12, 0),
+        Size = UDim2.new(0.38, 0, 1, 0),
         Text = options.Title or "Toggle",
         Font = Enum.Font.GothamMedium,
         TextSize = 13,
         TextColor3 = theme.Text,
-        TextXAlignment = Enum.TextXAlignment.Left
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ClipsDescendants = false
     })
 
-    -- Texto do label (lado esquerdo, embaixo do título)
+    -- Barra separadora vertical
+    local divider = New("Frame", {
+        Parent = bg,
+        BackgroundColor3 = cfg.border,
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0.42, 0, 0.5, 0),
+        Size = UDim2.fromOffset(1, 22)
+    })
+
+    -- Label text (centro)
     local labelText = New("TextLabel", {
         Parent = bg,
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(12, 26),
-        Size = UDim2.new(1, -70, 0, 14),
+        Position = UDim2.new(0.44, 0, 0, 0),
+        Size = UDim2.new(0.38, -8, 1, 0),
         Text = options.Label or "",
         Font = Enum.Font.Gotham,
-        TextSize = 11,
+        TextSize = 12,
         TextWrapped = false,
         TextTruncate = Enum.TextTruncate.AtEnd,
-        TextColor3 = theme.TextDim,
+        TextColor3 = cfg.labelColor,
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    -- Switch (lado direito, centralizado verticalmente)
+    -- Switch (direita)
     local switch = New("Frame", {
         Parent = bg,
         AnchorPoint = Vector2.new(1, 0.5),
@@ -1253,22 +1275,11 @@ function SectionClass:AddLabelToggle(options)
 
     function element:SetValue(v)
         state = v == true
-
-        Tween(switch, 0.16, {
-            BackgroundColor3 = state and theme.Primary or theme.SurfaceLight
-        })
-        Tween(switchStroke, 0.16, {
-            Color = state and theme.Primary or theme.Border
-        })
-        Tween(knob, 0.16, {
-            Position = UDim2.fromOffset(state and 22 or 2, 2)
-        })
-
+        Tween(switch, 0.16, {BackgroundColor3 = state and theme.Primary or theme.SurfaceLight})
+        Tween(switchStroke, 0.16, {Color = state and theme.Primary or theme.Border})
+        Tween(knob, 0.16, {Position = UDim2.fromOffset(state and 22 or 2, 2)})
         element.Value = state
-
-        if options.Callback then
-            options.Callback(state)
-        end
+        if options.Callback then options.Callback(state) end
         changed:Fire(state)
     end
 
@@ -1276,13 +1287,17 @@ function SectionClass:AddLabelToggle(options)
         labelText.Text = text or ""
     end
 
-    function element:GetValue()
-        return state
+    function element:SetType(newType)
+        local nc = typeConfig[string.lower(newType)] or typeConfig.default
+        bg.BackgroundColor3 = nc.bg
+        bgStroke.Color = nc.border
+        bgStroke.Transparency = newType == "default" and 0 or 0.4
+        labelText.TextColor3 = nc.labelColor
+        divider.BackgroundColor3 = nc.border
     end
 
-    function element:OnChanged(fn)
-        return changed:Connect(fn)
-    end
+    function element:GetValue() return state end
+    function element:OnChanged(fn) return changed:Connect(fn) end
 
     click.MouseButton1Click:Connect(function()
         element:SetValue(not state)
@@ -1290,7 +1305,6 @@ function SectionClass:AddLabelToggle(options)
 
     element.Instance = frame
     element.Value = state
-
     return element
 end
 
@@ -2524,19 +2538,14 @@ local function CreateWindowShell(window)
     })
 
     local alphaDragging = false
-    local currentAlpha = 0.05  -- valor inicial (5%)
 
     local function setAlpha(percent)
         percent = math.clamp(percent, 0, 0.9)
-        currentAlpha = percent
         window.Settings.Transparency = percent
         alphaFill.Size = UDim2.new(percent, 0, 1, 0)
         alphaKnob.Position = UDim2.new(percent, 0, 0.5, 0)
         alphaValueLabel.Text = math.floor(percent * 100) .. "%"
-        -- Aplica na frame principal
-        if frame then
-            frame.BackgroundTransparency = percent
-        end
+        frame.BackgroundTransparency = percent
     end
 
     alphaInput.InputBegan:Connect(function(inp)
@@ -2757,6 +2766,7 @@ function Library:CreateWindow(options)
         Settings = {
             ToggleKey = config.ToggleKey or nil,
             FloatHidden = false,
+            Transparency = 0.05,
         }
     }, WindowClass)
 
