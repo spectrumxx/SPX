@@ -1900,9 +1900,9 @@ local function CreateWindowShell(window)
     })
     MakePadding(titleBar, 14, 14, 10, 8)
 
-    local titleIcon = CreateIcon(titleBar, window.Config.Icon or "panel", theme.Primary, 54, 0)
+    local titleIcon = CreateIcon(titleBar, window.Config.Icon or "panel", theme.Primary, 32, 0)
     if titleIcon then
-        titleIcon.Position = UDim2.new(0, 0, 0.5, -8)
+        titleIcon.Position = UDim2.new(0, 0, 0.5, -16)
     end
 
     local titleX = titleIcon and 44 or 0
