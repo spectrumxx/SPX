@@ -1,3 +1,4 @@
+-- SPECTRUM X NEW LIBRARY
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -1735,7 +1736,7 @@ function SectionClass:AddDropdown(options)
                 obj:Destroy()
             end
         end
-        table.clear(itemRefs)
+        itemRefs = {}
 
         local visibleCount = 0
 
