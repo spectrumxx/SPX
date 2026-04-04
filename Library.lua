@@ -292,9 +292,20 @@ local function MakeDraggable(handle, target, callback)
         end
 
         local delta = input.Position - dragStart
+        local vp = GetViewport()
+        local size = target.AbsoluteSize
+        local hw, hh = size.X / 2, size.Y / 2
+
+        local rawX = startPos.X.Offset + delta.X
+        local rawY = startPos.Y.Offset + delta.Y
+
+        -- Clamp: ancora em (0.5, 0.5), então offset é relativo ao centro
+        local clampedX = math.clamp(rawX, -(vp.X / 2 - hw), vp.X / 2 - hw)
+        local clampedY = math.clamp(rawY, -(vp.Y / 2 - hh), vp.Y / 2 - hh)
+
         target.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            startPos.X.Scale, clampedX,
+            startPos.Y.Scale, clampedY
         )
 
         if callback then
@@ -700,9 +711,19 @@ function WindowClass:_createFloatingButton()
         end
 
         local delta = input.Position - dragStart
+        local vp = GetViewport()
+        local hs = holder.AbsoluteSize
+
+        local rawX = holderStartPos.X.Offset + delta.X
+        local rawY = holderStartPos.Y.Offset + delta.Y
+
+        -- holder usa AnchorPoint (0, 0.5), Position relativo a scale (0, 0.5)
+        local clampedX = math.clamp(rawX, 0, vp.X - hs.X)
+        local clampedY = math.clamp(rawY, -(vp.Y / 2 - hs.Y / 2), vp.Y / 2 - hs.Y / 2)
+
         holder.Position = UDim2.new(
-            holderStartPos.X.Scale, holderStartPos.X.Offset + delta.X,
-            holderStartPos.Y.Scale, holderStartPos.Y.Offset + delta.Y
+            holderStartPos.X.Scale, clampedX,
+            holderStartPos.Y.Scale, clampedY
         )
     end)
 
@@ -834,6 +855,8 @@ function WindowClass:AddTab(options)
         ScrollBarThickness = 2,
         ScrollBarImageColor3 = self.Theme.Border,
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ElasticBehavior = Enum.ElasticBehavior.Never,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
         Visible = false
     })
     MakePadding(page, 12, 12, 12, 12)
@@ -1155,8 +1178,121 @@ function SectionClass:AddToggle(options)
     return element
 end
 
+function SectionClass:AddLabelToggle(options)
+    options = options or {}
+    local theme = self.Window.Theme
+    local state = options.Default == true
+    local changed = CreateSignal()
 
-function SectionClass:AddSlider(options)
+    -- Altura maior pra acomodar o label
+    local frame = self:_createElement(56)
+
+    local bg = New("Frame", {
+        Parent = frame,
+        BackgroundColor3 = theme.SurfaceAlt,
+        Size = UDim2.fromScale(1, 1)
+    })
+    MakeCorner(bg, 10)
+    MakeStroke(bg, theme.Border, 1, 0)
+
+    -- Título do toggle (lado esquerdo, em cima)
+    local titleLabel = New("TextLabel", {
+        Parent = bg,
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(12, 7),
+        Size = UDim2.new(1, -70, 0, 16),
+        Text = options.Title or "Toggle",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextColor3 = theme.Text,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    -- Texto do label (lado esquerdo, embaixo do título)
+    local labelText = New("TextLabel", {
+        Parent = bg,
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(12, 26),
+        Size = UDim2.new(1, -70, 0, 14),
+        Text = options.Label or "",
+        Font = Enum.Font.Gotham,
+        TextSize = 11,
+        TextWrapped = false,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextColor3 = theme.TextDim,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    -- Switch (lado direito, centralizado verticalmente)
+    local switch = New("Frame", {
+        Parent = bg,
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -12, 0.5, 0),
+        Size = UDim2.fromOffset(42, 22),
+        BackgroundColor3 = state and theme.Primary or theme.SurfaceLight
+    })
+    MakeCorner(switch, 999)
+    local switchStroke = MakeStroke(switch, state and theme.Primary or theme.Border, 1, 0)
+
+    local knob = New("Frame", {
+        Parent = switch,
+        Size = UDim2.fromOffset(18, 18),
+        Position = UDim2.fromOffset(state and 22 or 2, 2),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    })
+    MakeCorner(knob, 999)
+
+    local click = New("TextButton", {
+        Parent = bg,
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        Text = ""
+    })
+
+    local element = {}
+
+    function element:SetValue(v)
+        state = v == true
+
+        Tween(switch, 0.16, {
+            BackgroundColor3 = state and theme.Primary or theme.SurfaceLight
+        })
+        Tween(switchStroke, 0.16, {
+            Color = state and theme.Primary or theme.Border
+        })
+        Tween(knob, 0.16, {
+            Position = UDim2.fromOffset(state and 22 or 2, 2)
+        })
+
+        element.Value = state
+
+        if options.Callback then
+            options.Callback(state)
+        end
+        changed:Fire(state)
+    end
+
+    function element:SetLabel(text)
+        labelText.Text = text or ""
+    end
+
+    function element:GetValue()
+        return state
+    end
+
+    function element:OnChanged(fn)
+        return changed:Connect(fn)
+    end
+
+    click.MouseButton1Click:Connect(function()
+        element:SetValue(not state)
+    end)
+
+    element.Instance = frame
+    element.Value = state
+
+    return element
+end
     options = options or {}
     local theme = self.Window.Theme
     local min = tonumber(options.Min or 0) or 0
@@ -1877,6 +2013,7 @@ local function CreateWindowShell(window)
         ResetOnSpawn = false,
         IgnoreGuiInset = true,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        DisplayOrder = 999,
         Parent = GetGuiParent()
     })
     ProtectGui(gui)
@@ -2078,7 +2215,9 @@ local function CreateWindowShell(window)
         CanvasSize = UDim2.new(),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollBarThickness = 2,
-        ScrollBarImageColor3 = theme.Border
+        ScrollBarImageColor3 = theme.Border,
+        ElasticBehavior = Enum.ElasticBehavior.Never,
+        ScrollingDirection = Enum.ScrollingDirection.Y
     })
     MakePadding(tabsScroll, 10, 10, 10, 10)
     local tabsList = MakeList(tabsScroll, Enum.FillDirection.Vertical, 8)
@@ -2314,6 +2453,112 @@ local function CreateWindowShell(window)
         })
         if window.FloatingButton then
             window.FloatingButton.Visible = not hidden
+        end
+    end)
+
+    -- Row: Transparência da UI
+    local alphaRow = New("Frame", {
+        Parent = settingsPanel,
+        BackgroundColor3 = theme.SurfaceAlt,
+        Size = UDim2.new(1, 0, 0, 52)
+    })
+    MakeCorner(alphaRow, 8)
+    MakeStroke(alphaRow, theme.Border, 1, 0)
+
+    New("TextLabel", {
+        Parent = alphaRow,
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(10, 6),
+        Size = UDim2.new(1, -60, 0, 14),
+        Text = "Transparência",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextColor3 = theme.Text,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    local alphaValueLabel = New("TextLabel", {
+        Parent = alphaRow,
+        BackgroundTransparency = 1,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -10, 0, 6),
+        Size = UDim2.fromOffset(36, 14),
+        Text = "5%",
+        Font = Enum.Font.Gotham,
+        TextSize = 11,
+        TextColor3 = theme.TextDim,
+        TextXAlignment = Enum.TextXAlignment.Right
+    })
+
+    local alphaBar = New("Frame", {
+        Parent = alphaRow,
+        Position = UDim2.fromOffset(10, 28),
+        Size = UDim2.new(1, -20, 0, 6),
+        BackgroundColor3 = theme.SurfaceLight
+    })
+    MakeCorner(alphaBar, 999)
+
+    local alphaFill = New("Frame", {
+        Parent = alphaBar,
+        Size = UDim2.new(0.05, 0, 1, 0),
+        BackgroundColor3 = theme.Primary
+    })
+    MakeCorner(alphaFill, 999)
+
+    local alphaKnob = New("Frame", {
+        Parent = alphaBar,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.fromOffset(12, 12),
+        Position = UDim2.new(0.05, 0, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    })
+    MakeCorner(alphaKnob, 999)
+
+    local alphaInput = New("TextButton", {
+        Parent = alphaRow,
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        Text = ""
+    })
+
+    local alphaDragging = false
+    local currentAlpha = 0.05  -- valor inicial (5%)
+
+    local function setAlpha(percent)
+        percent = math.clamp(percent, 0, 0.9)
+        currentAlpha = percent
+        window.Settings.Transparency = percent
+        alphaFill.Size = UDim2.new(percent, 0, 1, 0)
+        alphaKnob.Position = UDim2.new(percent, 0, 0.5, 0)
+        alphaValueLabel.Text = math.floor(percent * 100) .. "%"
+        -- Aplica na frame principal
+        if frame then
+            frame.BackgroundTransparency = percent
+        end
+    end
+
+    alphaInput.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+            or inp.UserInputType == Enum.UserInputType.Touch then
+            alphaDragging = true
+            local pct = (inp.Position.X - alphaBar.AbsolutePosition.X) / alphaBar.AbsoluteSize.X
+            setAlpha(pct)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(inp)
+        if not alphaDragging then return end
+        if inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch then
+            local pct = (inp.Position.X - alphaBar.AbsolutePosition.X) / alphaBar.AbsoluteSize.X
+            setAlpha(pct)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+            or inp.UserInputType == Enum.UserInputType.Touch then
+            alphaDragging = false
         end
     end)
 
