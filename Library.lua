@@ -1936,12 +1936,50 @@ local function CreateWindowShell(window)
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, 0, 0.5, 0),
-        Size = UDim2.fromOffset(68, 28)
+        Size = UDim2.fromOffset(104, 28)
     })
 
     local controlsList = MakeList(controls, Enum.FillDirection.Horizontal, 8)
     controlsList.HorizontalAlignment = Enum.HorizontalAlignment.Right
     controlsList.VerticalAlignment = Enum.VerticalAlignment.Center
+
+    -- Botão de settings
+    local settingsWrap = New("Frame", {
+        Parent = controls,
+        BackgroundColor3 = theme.SurfaceAlt,
+        Size = UDim2.fromOffset(28, 28)
+    })
+    MakeCorner(settingsWrap, 8)
+    MakeStroke(settingsWrap, theme.Border, 1, 0)
+
+    local settingsBtn = New("TextButton", {
+        Parent = settingsWrap,
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        Text = ""
+    })
+    local settingsIconResolved = ResolveIcon("lucide-settings-2")
+    if settingsIconResolved and IsImageIcon(settingsIconResolved) then
+        New("ImageLabel", {
+            Parent = settingsWrap,
+            BackgroundTransparency = 1,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.fromOffset(14, 14),
+            Image = settingsIconResolved,
+            ImageColor3 = theme.TextMuted
+        })
+    else
+        New("TextLabel", {
+            Parent = settingsWrap,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromScale(1, 1),
+            Text = "⚙",
+            Font = Enum.Font.GothamBold,
+            TextSize = 13,
+            TextColor3 = theme.TextMuted
+        })
+    end
 
     local minimizeWrap = New("Frame", {
         Parent = controls,
@@ -2061,11 +2099,211 @@ local function CreateWindowShell(window)
         Tween(minimizeWrap, 0.14, {BackgroundColor3 = theme.SurfaceAlt})
     end)
 
+    settingsBtn.MouseEnter:Connect(function()
+        Tween(settingsWrap, 0.14, {BackgroundColor3 = theme.SurfaceLight})
+    end)
+    settingsBtn.MouseLeave:Connect(function()
+        Tween(settingsWrap, 0.14, {BackgroundColor3 = theme.SurfaceAlt})
+    end)
+
     close.MouseEnter:Connect(function()
         Tween(closeWrap, 0.14, {BackgroundColor3 = theme.Error})
     end)
     close.MouseLeave:Connect(function()
         Tween(closeWrap, 0.14, {BackgroundColor3 = theme.SurfaceAlt})
+    end)
+
+    -- Painel de configurações da UI
+    local settingsPanel = New("Frame", {
+        Parent = frame,
+        BackgroundColor3 = theme.Surface,
+        BackgroundTransparency = 0,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -10, 0, 58),
+        Size = UDim2.fromOffset(220, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ClipsDescendants = false,
+        Visible = false,
+        ZIndex = 20
+    })
+    MakeCorner(settingsPanel, 10)
+    MakeStroke(settingsPanel, theme.Border, 1, 0)
+    MakePadding(settingsPanel, 12, 12, 10, 10)
+
+    -- Sombra do painel
+    local panelShadow = New("Frame", {
+        Parent = frame,
+        BackgroundColor3 = theme.Shadow,
+        BackgroundTransparency = 0.6,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -8, 0, 62),
+        Size = UDim2.fromOffset(220, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Visible = false,
+        ZIndex = 19
+    })
+    MakeCorner(panelShadow, 10)
+
+    local panelList = MakeList(settingsPanel, Enum.FillDirection.Vertical, 8)
+
+    -- Título do painel
+    New("TextLabel", {
+        Parent = settingsPanel,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 16),
+        Text = "Configurações",
+        Font = Enum.Font.GothamSemibold,
+        TextSize = 13,
+        TextColor3 = theme.TextDim,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    -- Divider
+    New("Frame", {
+        Parent = settingsPanel,
+        BackgroundColor3 = theme.Border,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 1)
+    })
+
+    -- Row: Toggle Keybind
+    local keybindRow = New("Frame", {
+        Parent = settingsPanel,
+        BackgroundColor3 = theme.SurfaceAlt,
+        Size = UDim2.new(1, 0, 0, 36)
+    })
+    MakeCorner(keybindRow, 8)
+    MakeStroke(keybindRow, theme.Border, 1, 0)
+
+    New("TextLabel", {
+        Parent = keybindRow,
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(10, 0),
+        Size = UDim2.new(1, -80, 1, 0),
+        Text = "Toggle Keybind",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextColor3 = theme.Text,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    local keybindBtn = New("TextButton", {
+        Parent = keybindRow,
+        BackgroundColor3 = theme.SurfaceLight,
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -8, 0.5, 0),
+        Size = UDim2.fromOffset(60, 22),
+        Text = window.Config.ToggleKey and tostring(window.Config.ToggleKey) or "None",
+        Font = Enum.Font.GothamSemibold,
+        TextSize = 11,
+        TextColor3 = theme.Primary
+    })
+    MakeCorner(keybindBtn, 6)
+    MakeStroke(keybindBtn, theme.Border, 1, 0)
+
+    local listeningForKey = false
+    keybindBtn.MouseButton1Click:Connect(function()
+        if listeningForKey then return end
+        listeningForKey = true
+        keybindBtn.Text = "..."
+        keybindBtn.TextColor3 = theme.Warning
+
+        local conn
+        conn = UserInputService.InputBegan:Connect(function(input, processed)
+            if processed then return end
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                window.Config.ToggleKey = input.KeyCode
+                keybindBtn.Text = tostring(input.KeyCode):gsub("Enum.KeyCode.", "")
+                keybindBtn.TextColor3 = theme.Primary
+                listeningForKey = false
+                conn:Disconnect()
+            end
+        end)
+    end)
+
+    -- Row: Hide FloatButton
+    local floatRow = New("Frame", {
+        Parent = settingsPanel,
+        BackgroundColor3 = theme.SurfaceAlt,
+        Size = UDim2.new(1, 0, 0, 36)
+    })
+    MakeCorner(floatRow, 8)
+    MakeStroke(floatRow, theme.Border, 1, 0)
+
+    New("TextLabel", {
+        Parent = floatRow,
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(10, 0),
+        Size = UDim2.new(1, -60, 1, 0),
+        Text = "Hide Float Button",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextColor3 = theme.Text,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    local floatHidden = false
+    local floatToggleSwitch = New("Frame", {
+        Parent = floatRow,
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -10, 0.5, 0),
+        Size = UDim2.fromOffset(36, 18),
+        BackgroundColor3 = theme.SurfaceLight
+    })
+    MakeCorner(floatToggleSwitch, 999)
+    MakeStroke(floatToggleSwitch, theme.Border, 1, 0)
+
+    local floatKnob = New("Frame", {
+        Parent = floatToggleSwitch,
+        Size = UDim2.fromOffset(14, 14),
+        Position = UDim2.fromOffset(2, 2),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    })
+    MakeCorner(floatKnob, 999)
+
+    local floatClick = New("TextButton", {
+        Parent = floatRow,
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        Text = ""
+    })
+
+    floatClick.MouseButton1Click:Connect(function()
+        floatHidden = not floatHidden
+        -- Atualiza switch visual
+        Tween(floatToggleSwitch, 0.16, {
+            BackgroundColor3 = floatHidden and theme.Primary or theme.SurfaceLight
+        })
+        Tween(floatKnob, 0.16, {
+            Position = floatHidden and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 2)
+        })
+        -- Esconde/mostra o floating button
+        if window.FloatingButton then
+            window.FloatingButton.Visible = not floatHidden
+        end
+    end)
+
+    -- Toggle do painel
+    local panelOpen = false
+    settingsBtn.MouseButton1Click:Connect(function()
+        panelOpen = not panelOpen
+        if panelOpen then
+            settingsPanel.Visible = true
+            panelShadow.Visible = true
+            Tween(settingsWrap, 0.14, {BackgroundColor3 = theme.SurfaceLight})
+        else
+            settingsPanel.Visible = false
+            panelShadow.Visible = false
+            Tween(settingsWrap, 0.14, {BackgroundColor3 = theme.SurfaceAlt})
+        end
+    end)
+
+    -- Keybind listener global
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then return end
+        if window.Config.ToggleKey and input.KeyCode == window.Config.ToggleKey then
+            window:Toggle()
+        end
     end)
 
     if window.Config.Draggable ~= false then
