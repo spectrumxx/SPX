@@ -819,5 +819,9 @@ return {
 		["lucide-x-square"] = "rbxassetid://10747384217",
 		["lucide-zoom-in"] = "rbxassetid://10747384552",
 		["lucide-zoom-out"] = "rbxassetid://10747384679",
+		["lucide-dog-nerd"] = "rbxassetid://137941939602314",
+		["lucide-dog-nerd"] = "rbxassetid://137941939602314",
+		["lucide-dog-dente"] = "rbxassetid://86545657821911",
+		["lucide-dog-chupetao"] = "rbxassetid://111009574293053",
 	},
 }
