@@ -14,6 +14,12 @@ local Library = {
     ActiveNotifications = {}
 }
 
+Library.GlobalSettings = {
+    ToggleKey    = nil,
+    FloatHidden  = false,
+    Transparency = 0.05,
+}
+
 local WindowClass = {}
 WindowClass.__index = WindowClass
 
@@ -44,7 +50,7 @@ local Themes = {
     }
 }
 
--- Carrega ícones Lucide do mesmo repositório via HttpGet
+-- Carrega ícones Lucide/SpectrumX
 local LucideAssets = {}
 pcall(function()
     local raw = loadstring(game:HttpGet(
@@ -163,23 +169,19 @@ local function ResolveIcon(icon)
     end
 
     if type(icon) == "string" then
-        -- Já é um assetid ou URL direto
         if string.find(icon, "rbxassetid://") or string.find(icon, "http") then
             return icon
         end
 
         local lower = string.lower(icon)
 
-        -- Tenta achar no dicionário Lucide (ex: "lucide-star" ou só "star" com prefixo)
         if LucideAssets[lower] then
             return LucideAssets[lower]
         end
-        -- Tenta com prefixo "lucide-" automático
         if LucideAssets["lucide-" .. lower] then
             return LucideAssets["lucide-" .. lower]
         end
 
-        -- Fallback: IconMap de emoji
         return IconMap[lower] or icon
     end
 
@@ -197,7 +199,6 @@ local function CreateIcon(parent, icon, color, size, posX)
         return nil
     end
 
-    -- Resolve primeiro (pode converter nome lucide → assetid)
     local resolved = ResolveIcon(icon)
     if not resolved or resolved == "" then
         return nil
@@ -299,7 +300,6 @@ local function MakeDraggable(handle, target, callback)
         local rawX = startPos.X.Offset + delta.X
         local rawY = startPos.Y.Offset + delta.Y
 
-        -- Clamp: ancora em (0.5, 0.5), então offset é relativo ao centro
         local clampedX = math.clamp(rawX, -(vp.X / 2 - hw), vp.X / 2 - hw)
         local clampedY = math.clamp(rawY, -(vp.Y / 2 - hh), vp.Y / 2 - hh)
 
@@ -493,6 +493,9 @@ function WindowClass:_applyResponsive()
 
     self.Frame.Size = UDim2.fromOffset(width, height)
 
+    local twoSides = self.Config.TwoSides and breakpoint ~= "Mobile"
+    local tabW = twoSides and 48 or self.Config.TabWidth
+
     if breakpoint == "Mobile" then
         self.BodyList.FillDirection = Enum.FillDirection.Vertical
         self.TabsFrame.Size = UDim2.new(1, 0, 0, 54)
@@ -501,17 +504,33 @@ function WindowClass:_applyResponsive()
         self.ContentFrame.Size = UDim2.new(1, 0, 1, -54)
     else
         self.BodyList.FillDirection = Enum.FillDirection.Horizontal
-        self.TabsFrame.Size = UDim2.new(0, self.Config.TabWidth, 1, 0)
+        self.TabsFrame.Size = UDim2.new(0, tabW, 1, 0)
         self.TabsList.FillDirection = Enum.FillDirection.Vertical
         self.TabsList.Padding = UDim.new(0, 8)
-        self.ContentFrame.Size = UDim2.new(1, -self.Config.TabWidth, 1, 0)
+        self.ContentFrame.Size = UDim2.new(1, -tabW, 1, 0)
     end
 
     for _, tab in ipairs(self.Tabs) do
         if breakpoint == "Mobile" then
             tab.Button.Size = UDim2.fromOffset(110, 38)
+            if tab.TextLabel then tab.TextLabel.Visible = true end
+            if tab.IconLabel then
+                tab.IconLabel.Position = UDim2.new(0, 10, 0.5, -7)
+            end
+        elseif twoSides then
+            -- Botão quadrado, icon centralizado, sem texto
+            tab.Button.Size = UDim2.new(1, 0, 0, 38)
+            if tab.TextLabel then tab.TextLabel.Visible = false end
+            if tab.IconLabel then
+                local s = tab.IconLabel.Size.X.Offset or 15
+                tab.IconLabel.Position = UDim2.new(0.5, -math.floor(s / 2), 0.5, -math.floor(s / 2))
+            end
         else
             tab.Button.Size = UDim2.new(1, 0, 0, 38)
+            if tab.TextLabel then tab.TextLabel.Visible = true end
+            if tab.IconLabel then
+                tab.IconLabel.Position = UDim2.new(0, 10, 0.5, -7)
+            end
         end
     end
 end
@@ -594,7 +613,6 @@ function WindowClass:_createFloatingButton()
     local size = cfg.Size or 34
     local cornerScale = 0.30
 
-    -- Posição: centro da tela, bem pra esquerda
     local holder = New("Frame", {
         Parent = self.Gui,
         Name = "FloatingButtonHolder",
@@ -612,7 +630,6 @@ function WindowClass:_createFloatingButton()
         BackgroundColor3 = self.Theme.Primary,
         BackgroundTransparency = 1
     })
-    -- Corner igual ao botão, não circular
     New("UICorner", {
         Parent = glow,
         CornerRadius = UDim.new(cornerScale, 0)
@@ -644,7 +661,6 @@ function WindowClass:_createFloatingButton()
         Text = ""
     })
 
-    -- Suporte completo a ícone: lucide nome, assetid rbx, catálogo URL, emoji
     local iconSrc = cfg.Icon or "settings"
     local resolvedIcon = ResolveIcon(iconSrc)
     local fbIcon
@@ -691,7 +707,6 @@ function WindowClass:_createFloatingButton()
         self:Toggle()
     end)
 
-    -- Drag: usa o button (TextButton) pra capturar Touch/Mouse corretamente
     local dragging = false
     local dragStart = nil
     local holderStartPos = nil
@@ -719,7 +734,6 @@ function WindowClass:_createFloatingButton()
         local rawX = holderStartPos.X.Offset + delta.X
         local rawY = holderStartPos.Y.Offset + delta.Y
 
-        -- holder usa AnchorPoint (0, 0.5), Position relativo a scale (0, 0.5)
         local clampedX = math.clamp(rawX, 0, vp.X - hs.X)
         local clampedY = math.clamp(rawY, -(vp.Y / 2 - hs.Y / 2), vp.Y / 2 - hs.Y / 2)
 
@@ -765,7 +779,6 @@ function WindowClass:_createResizeHandle()
             ImageColor3 = self.Theme.TextDim
         })
     else
-        -- fallback: ícone unicode de canto
         New("TextLabel", {
             Parent = grip,
             BackgroundTransparency = 1,
@@ -848,21 +861,72 @@ function WindowClass:AddTab(options)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local page = New("ScrollingFrame", {
-        Parent = self.ContentPages,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Size = UDim2.fromScale(1, 1),
-        CanvasSize = UDim2.new(),
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = self.Theme.Border,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ElasticBehavior = Enum.ElasticBehavior.Never,
-        ScrollingDirection = Enum.ScrollingDirection.Y,
-        Visible = false
-    })
-    MakePadding(page, 12, 12, 12, 12)
-    local pageList = MakeList(page, Enum.FillDirection.Vertical, 12)
+    local page, pageList, leftPage, rightPage
+
+    if self.Config.TwoSides then
+        -- Container com dois ScrollingFrames lado a lado
+        page = New("Frame", {
+            Parent = self.ContentPages,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromScale(1, 1),
+            Visible = false
+        })
+        MakeList(page, Enum.FillDirection.Horizontal, 0)
+
+        leftPage = New("ScrollingFrame", {
+            Parent = page,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Size = UDim2.new(0.5, -1, 1, 0),
+            CanvasSize = UDim2.new(),
+            ScrollBarThickness = 2,
+            ScrollBarImageColor3 = self.Theme.Border,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ElasticBehavior = Enum.ElasticBehavior.Never,
+            ScrollingDirection = Enum.ScrollingDirection.Y
+        })
+        MakePadding(leftPage, 8, 4, 8, 8)
+        MakeList(leftPage, Enum.FillDirection.Vertical, 10)
+
+        -- Divisor central
+        New("Frame", {
+            Parent = page,
+            BackgroundColor3 = self.Theme.Border,
+            BorderSizePixel = 0,
+            Size = UDim2.new(0, 1, 1, 0)
+        })
+
+        rightPage = New("ScrollingFrame", {
+            Parent = page,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Size = UDim2.new(0.5, -1, 1, 0),
+            CanvasSize = UDim2.new(),
+            ScrollBarThickness = 2,
+            ScrollBarImageColor3 = self.Theme.Border,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ElasticBehavior = Enum.ElasticBehavior.Never,
+            ScrollingDirection = Enum.ScrollingDirection.Y
+        })
+        MakePadding(rightPage, 4, 8, 8, 8)
+        MakeList(rightPage, Enum.FillDirection.Vertical, 10)
+    else
+        page = New("ScrollingFrame", {
+            Parent = self.ContentPages,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Size = UDim2.fromScale(1, 1),
+            CanvasSize = UDim2.new(),
+            ScrollBarThickness = 2,
+            ScrollBarImageColor3 = self.Theme.Border,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ElasticBehavior = Enum.ElasticBehavior.Never,
+            ScrollingDirection = Enum.ScrollingDirection.Y,
+            Visible = false
+        })
+        MakePadding(page, 12, 12, 12, 12)
+        pageList = MakeList(page, Enum.FillDirection.Vertical, 12)
+    end
 
     tab.Button = buttonFrame
     tab.ButtonFrame = buttonFrame
@@ -872,6 +936,8 @@ function WindowClass:AddTab(options)
     tab.TextLabel = text
     tab.Page = page
     tab.PageList = pageList
+    tab.LeftPage = leftPage
+    tab.RightPage = rightPage
     tab.Sections = {}
 
     button.MouseButton1Click:Connect(function()
@@ -900,14 +966,30 @@ function WindowClass:AddTab(options)
     return tab
 end
 
-function TabClass:AddSection(title)
+function TabClass:AddSection(titleOrOptions, sideParam)
+    local title, side
+    if type(titleOrOptions) == "table" then
+        title = titleOrOptions.Title or titleOrOptions.Name or "Section"
+        side  = string.lower(titleOrOptions.Side or sideParam or "left")
+    else
+        title = titleOrOptions or "Section"
+        side  = string.lower(sideParam or "left")
+    end
+
     local section = setmetatable({}, SectionClass)
-    section.Tab = self
+    section.Tab    = self
     section.Window = self.Window
-    section.Title = title or "Section"
+    section.Title  = title
+
+    local parentPage
+    if self.Window.Config.TwoSides then
+        parentPage = (side == "right") and self.RightPage or self.LeftPage
+    else
+        parentPage = self.Page
+    end
 
     local frame = New("Frame", {
-        Parent = self.Page,
+        Parent = parentPage,
         BackgroundColor3 = self.Window.Theme.Surface,
         AutomaticSize = Enum.AutomaticSize.Y,
         Size = UDim2.new(1, 0, 0, 0)
@@ -969,7 +1051,6 @@ function SectionClass:AddLabel(options)
     local theme = self.Window.Theme
     local labelType = string.lower(options.Type or "default")
 
-    -- Cores e ícones por tipo
     local typeConfig = {
         default  = { bg = theme.SurfaceAlt,                    border = theme.Border,   text = theme.TextMuted, bar = nil },
         success  = { bg = Color3.fromRGB(20, 40, 26),          border = theme.Success,  text = theme.Success,   bar = theme.Success },
@@ -989,7 +1070,6 @@ function SectionClass:AddLabel(options)
     MakeStroke(frame, cfg.border, 1, labelType == "default" and 0 or 0.3)
     MakePadding(frame, cfg.bar and 26 or 12, 12, 10, 10)
 
-    -- Barra lateral colorida (tipos não-default)
     if cfg.bar then
         local bar = New("Frame", {
             Parent = frame,
@@ -1206,7 +1286,6 @@ function SectionClass:AddLabelToggle(options)
     MakeCorner(bg, 10)
     local bgStroke = MakeStroke(bg, cfg.border, 1, labelType == "default" and 0 or 0.4)
 
-    -- Toggle title (esquerda)
     local titleLabel = New("TextLabel", {
         Parent = bg,
         BackgroundTransparency = 1,
@@ -1221,7 +1300,6 @@ function SectionClass:AddLabelToggle(options)
         ClipsDescendants = false
     })
 
-    -- Barra separadora vertical
     local divider = New("Frame", {
         Parent = bg,
         BackgroundColor3 = cfg.border,
@@ -1230,7 +1308,6 @@ function SectionClass:AddLabelToggle(options)
         Size = UDim2.fromOffset(1, 22)
     })
 
-    -- Label text (centro)
     local labelText = New("TextLabel", {
         Parent = bg,
         BackgroundTransparency = 1,
@@ -1245,7 +1322,6 @@ function SectionClass:AddLabelToggle(options)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    -- Switch (direita)
     local switch = New("Frame", {
         Parent = bg,
         AnchorPoint = Vector2.new(1, 0.5),
@@ -1458,7 +1534,6 @@ function SectionClass:AddSlider(options)
     return element
 end
 
-
 function SectionClass:AddInput(options)
     options = options or {}
     local value = tostring(options.Default or "")
@@ -1650,7 +1725,6 @@ function SectionClass:AddDropdown(options)
     local searchBox
     local searchText = ""
 
-    -- Multi sempre tem search por padrão, ou se explicitamente pedido
     local hasSearch = options.Search or (isMulti and options.Search ~= false)
 
     if hasSearch then
@@ -1867,7 +1941,7 @@ function SectionClass:AddDropdown(options)
 
             local maxVisible = math.min(visibleCount, 5)
             local searchOffset = hasSearch and 38 or 0
-            local targetHeight = searchOffset + (maxVisible * 36) + 12 -- +12 padding top+bottom
+            local targetHeight = searchOffset + (maxVisible * 36) + 12
 
             Tween(dropdownHolder, 0.18, {
                 Size = UDim2.new(1, 0, 0, targetHeight)
@@ -2315,7 +2389,6 @@ local function CreateWindowShell(window)
     MakeStroke(settingsPanel, theme.Border, 1, 0)
     MakePadding(settingsPanel, 12, 12, 10, 10)
 
-    -- Sombra do painel
     local panelShadow = New("Frame", {
         Parent = frame,
         BackgroundColor3 = theme.Shadow,
@@ -2331,7 +2404,6 @@ local function CreateWindowShell(window)
 
     local panelList = MakeList(settingsPanel, Enum.FillDirection.Vertical, 8)
 
-    -- Título do painel
     New("TextLabel", {
         Parent = settingsPanel,
         BackgroundTransparency = 1,
@@ -2343,7 +2415,6 @@ local function CreateWindowShell(window)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    -- Divider
     New("Frame", {
         Parent = settingsPanel,
         BackgroundColor3 = theme.Border,
@@ -2395,15 +2466,14 @@ local function CreateWindowShell(window)
 
         local conn
         conn = UserInputService.InputBegan:Connect(function(input)
-            -- ignora cliques de mouse, só teclas
             if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-            -- ignora teclas de sistema que não fazem sentido como keybind
             local ignored = {
                 [Enum.KeyCode.Unknown] = true,
             }
             if ignored[input.KeyCode] then return end
 
             window.Settings.ToggleKey = input.KeyCode
+            Library.GlobalSettings.ToggleKey = input.KeyCode
             local keyName = tostring(input.KeyCode):gsub("Enum%.KeyCode%.", "")
             keybindBtn.Text = keyName
             keybindBtn.TextColor3 = theme.Primary
@@ -2438,7 +2508,7 @@ local function CreateWindowShell(window)
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -10, 0.5, 0),
         Size = UDim2.fromOffset(36, 18),
-        BackgroundColor3 = theme.SurfaceLight
+        BackgroundColor3 = window.Settings.FloatHidden and theme.Primary or theme.SurfaceLight
     })
     MakeCorner(floatToggleSwitch, 999)
     MakeStroke(floatToggleSwitch, theme.Border, 1, 0)
@@ -2446,7 +2516,7 @@ local function CreateWindowShell(window)
     local floatKnob = New("Frame", {
         Parent = floatToggleSwitch,
         Size = UDim2.fromOffset(14, 14),
-        Position = UDim2.fromOffset(2, 2),
+        Position = window.Settings.FloatHidden and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 2),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     })
     MakeCorner(floatKnob, 999)
@@ -2460,6 +2530,7 @@ local function CreateWindowShell(window)
 
     floatClick.MouseButton1Click:Connect(function()
         window.Settings.FloatHidden = not window.Settings.FloatHidden
+        Library.GlobalSettings.FloatHidden = window.Settings.FloatHidden
         local hidden = window.Settings.FloatHidden
         Tween(floatToggleSwitch, 0.16, {
             BackgroundColor3 = hidden and theme.Primary or theme.SurfaceLight
@@ -2493,13 +2564,14 @@ local function CreateWindowShell(window)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
+    local initAlpha = window.Settings.Transparency
     local alphaValueLabel = New("TextLabel", {
         Parent = alphaRow,
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(1, -10, 0, 6),
         Size = UDim2.fromOffset(36, 14),
-        Text = "5%",
+        Text = math.floor(initAlpha * 100) .. "%",
         Font = Enum.Font.Gotham,
         TextSize = 11,
         TextColor3 = theme.TextDim,
@@ -2516,7 +2588,7 @@ local function CreateWindowShell(window)
 
     local alphaFill = New("Frame", {
         Parent = alphaBar,
-        Size = UDim2.new(0.05, 0, 1, 0),
+        Size = UDim2.new(initAlpha, 0, 1, 0),
         BackgroundColor3 = theme.Primary
     })
     MakeCorner(alphaFill, 999)
@@ -2525,7 +2597,7 @@ local function CreateWindowShell(window)
         Parent = alphaBar,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Size = UDim2.fromOffset(12, 12),
-        Position = UDim2.new(0.05, 0, 0.5, 0),
+        Position = UDim2.new(initAlpha, 0, 0.5, 0),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     })
     MakeCorner(alphaKnob, 999)
@@ -2542,6 +2614,7 @@ local function CreateWindowShell(window)
     local function setAlpha(percent)
         percent = math.clamp(percent, 0, 0.9)
         window.Settings.Transparency = percent
+        Library.GlobalSettings.Transparency = percent
         alphaFill.Size = UDim2.new(percent, 0, 1, 0)
         alphaKnob.Position = UDim2.new(percent, 0, 0.5, 0)
         alphaValueLabel.Text = math.floor(percent * 100) .. "%"
@@ -2620,6 +2693,11 @@ local function CreateWindowShell(window)
     window:_createResizeHandle()
     window:_createFloatingButton()
     window:_applyResponsive()
+
+    -- Aplica estado inicial do FloatHidden herdado do GlobalSettings
+    if window.Settings.FloatHidden and window.FloatingButton then
+        window.FloatingButton.Visible = false
+    end
 
     if workspace.CurrentCamera then
         workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
@@ -2742,6 +2820,7 @@ function Library:CreateWindow(options)
         Acrylic = true,
         Draggable = true,
         Resizable = true,
+        TwoSides = false,
         FloatingButton = {
             Enabled = true,
             Icon = "lucide-spectrumx",
@@ -2764,9 +2843,9 @@ function Library:CreateWindow(options)
         Visible = true,
         Breakpoint = "Desktop",
         Settings = {
-            ToggleKey = config.ToggleKey or nil,
-            FloatHidden = false,
-            Transparency = 0.05,
+            ToggleKey    = config.ToggleKey or Library.GlobalSettings.ToggleKey or nil,
+            FloatHidden  = Library.GlobalSettings.FloatHidden or false,
+            Transparency = Library.GlobalSettings.Transparency or 0.05,
         }
     }, WindowClass)
 
