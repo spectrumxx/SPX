@@ -6535,7 +6535,7 @@ function Library:CreateWindow(Config)
 	Library.MinimizeKey = Config.MinimizeKey or Enum.KeyCode.LeftControl
 	Library.UseAcrylic = Config.Acrylic or false
 	Library.Acrylic = Config.Acrylic or false
-	Library.Theme = Config.Theme or "Dark"
+	Library.Theme = Config.Theme or "AMOLED"
 	if Config.Acrylic then
 		Acrylic.init()
 	end
@@ -6660,18 +6660,21 @@ end
 local MinimizeButton = New("TextButton", {
 	BackgroundTransparency = 1,
 	Size = UDim2.new(1, 0, 1, 0),
-	BorderSizePixel = 0
+	BorderSizePixel = 0,
+	ZIndex = 999999999,
 }, {
 	New("UIPadding", {
-		PaddingBottom = UDim.new(0, 2),
-		PaddingLeft = UDim.new(0, 2),
-		PaddingRight = UDim.new(0, 2),
-		PaddingTop = UDim.new(0, 2),
+		PaddingBottom = UDim.new(0, 8),
+		PaddingLeft = UDim.new(0, 8),
+		PaddingRight = UDim.new(0, 8),
+		PaddingTop = UDim.new(0, 8),
 	}),
 	New("ImageLabel", {
-		Image = Mobile and (Button_Icon ~= "" and Button_Icon or "rbxassetid://10734897102") or "rbxassetid://10734897102",
+		Name = "Icon",
+		Image = "rbxassetid://10734897102", -- Moon icon for toggle
 		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundTransparency = 1,
+		ImageColor3 = Color3.fromRGB(255, 255, 255),
 	}, {
 		New("UIAspectRatioConstraint", {
 			AspectRatio = 1,
@@ -6682,50 +6685,55 @@ local MinimizeButton = New("TextButton", {
 
 local Minimizer
 
-if Mobile then
-	Minimizer = New("Frame", {
-		Parent = GUI,
-		Size = UDim2.new(0.08, 1, 0.1642, 1),
-		Position = UDim2.new(0.45, 0, 0.025, 0),
-		BackgroundTransparency = 1,
-		ZIndex = 999999999,
-	},
-	{
+-- Floating Toggle UI - Rounded corners (20px), thin borders, AMOLED style
+local MinimizerSize = Mobile and UDim2.new(0, 60, 0, 60) or UDim2.new(0, 50, 0, 50)
+local MinimizerPos = UDim2.new(0.85, 0, 0.85, 0) -- Bottom right corner
+
+Minimizer = New("Frame", {
+	Parent = GUI,
+	Size = MinimizerSize,
+	Position = MinimizerPos,
+	BackgroundTransparency = 1,
+	ZIndex = 999999999,
+	Visible = true,
+	Active = true,
+	Draggable = true,
+},
+{
+	-- Main background with AMOLED black
+	New("Frame", {
+		Name = "Background",
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 0.1,
+		BorderSizePixel = 0,
+	}, {
+		-- Corner radius 20
+		New("UICorner", {
+			CornerRadius = UDim.new(0, 20),
+		}),
+		-- Thin border stroke
+		New("UIStroke", {
+			Color = Color3.fromRGB(40, 40, 40),
+			Thickness = 1.5,
+			Transparency = 0.3,
+		}),
+		-- Inner glow effect when active
 		New("Frame", {
-			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundTransparency = 0.5,
-			BorderSizePixel = 0
+			Name = "Glow",
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			Size = UDim2.new(1, -4, 1, -4),
+			Position = UDim2.new(0, 2, 0, 2),
+			BackgroundTransparency = 0.95,
+			BorderSizePixel = 0,
 		}, {
 			New("UICorner", {
-				CornerRadius = UDim.new(0.25, 0),
+				CornerRadius = UDim.new(0, 18),
 			}),
-			MinimizeButton
-		})
+		}),
+		MinimizeButton
 	})
-else
-	Minimizer = New("Frame", {
-		Parent = GUI,
-		Size = UDim2.new(0, 0, 0, 0),
-		Position = UDim2.new(0.45, 0, 0.025, 0),
-		BackgroundTransparency = 1,
-		ZIndex = 999999999,
-		Visible = false
-	},
-	{
-		New("Frame", {
-			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-			Size = UDim2.new(0, 0, 0, 0),
-			BackgroundTransparency = 0,
-			BorderSizePixel = 0
-		}, {
-			New("UICorner", {
-				CornerRadius = UDim.new(0.25, 0),
-			}),
-			MinimizeButton
-		})
-	})
-end
+})
 
 Creator.AddSignal(Minimizer.InputBegan, function(Input)
 	if
@@ -6798,3 +6806,5 @@ end)
 task.wait(0.01)
 
 return Library, SaveManager, InterfaceManager, Mobile
+
+-- repo: https://raw.githubusercontent.com/spectrumxx/SPX/refs/heads/main/Fluent.lua
