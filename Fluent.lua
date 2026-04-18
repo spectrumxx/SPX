@@ -3,6 +3,92 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+
+-- ==========================================
+-- EXTERNAL ICONS LOADER
+-- Load icons from GitHub repository
+-- ==========================================
+local LucideIcons = {}
+local IconsLoaded = false
+
+local function LoadExternalIcons()
+	local success, result = pcall(function()
+		local iconsData = loadstring(game:HttpGet(
+			"https://raw.githubusercontent.com/spectrumxx/SPX/refs/heads/main/Icons.lua",
+			true
+		))()
+		return iconsData
+	end)
+	
+	if success and result and result.assets then
+		LucideIcons = result.assets
+		IconsLoaded = true
+		print("[Fluent] External icons loaded successfully")
+	else
+		warn("[Fluent] Failed to load external icons, using fallback emoji icons")
+		IconsLoaded = false
+	end
+end
+
+-- Load icons asynchronously
+coroutine.wrap(LoadExternalIcons)()
+
+-- Icon resolver function
+local function ResolveIcon(icon)
+	if not icon or icon == "" then return nil end
+	
+	-- If it's already an image URL
+	if type(icon) == "string" and (icon:match("rbxassetid://") or icon:match("^http")) then
+		return icon
+	end
+	
+	-- Try external icons first
+	if IconsLoaded and type(icon) == "string" then
+		local lower = icon:lower()
+		-- Try direct match
+		if LucideIcons[lower] then
+			return LucideIcons[lower]
+		end
+		-- Try with lucide- prefix
+		if LucideIcons["lucide-" .. lower] then
+			return LucideIcons["lucide-" .. lower]
+		end
+	end
+	
+	-- Fallback emoji icons
+	local EmojiIcons = {
+		home = "⌂",
+		settings = "⚙",
+		menu = "☰",
+		user = "👤",
+		search = "⌕",
+		bell = "🔔",
+		info = "ⓘ",
+		star = "★",
+		folder = "🗀",
+		shield = "🛡",
+		zap = "⚡",
+		play = "▶",
+		terminal = ">_",
+		grid = "☷",
+		sliders = "≡",
+		eye = "👁",
+		save = "💾",
+		monitor = "🖥",
+		heart = "♥",
+		close = "✕",
+		maximize = "□",
+		minimize = "−"
+	}
+	
+	return EmojiIcons[icon:lower()] or icon
+end
+
+local function IsImageIcon(icon)
+	if type(icon) ~= "string" then return false end
+	return icon:match("rbxassetid://") ~= nil or icon:match("^http") ~= nil
+end
+
 local TextService = game:GetService("TextService")
 local Camera = game:GetService("Workspace").CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
@@ -2898,7 +2984,7 @@ Components.TitleBar = (function()
 		end
 
 		TitleBar.Frame = New("Frame", {
-			Size = UDim2.new(1, 0, 0, 42),
+			Size = UDim2.new(1, 0, 0, 32),
 			BackgroundTransparency = 1,
 			Parent = Config.Parent,
 		}, {
@@ -2964,7 +3050,7 @@ Components.TitleBar = (function()
 			}),
 		})
 
-		TitleBar.CloseButton = BarButton(Components.Assets.Close, UDim2.new(1, -4, 0, 4), TitleBar.Frame, function()
+		TitleBar.CloseButton = BarButton(ResolveIcon("close") or Components.Assets.Close, UDim2.new(1, -4, 0, 4), TitleBar.Frame, function()
 			Library.Window:Dialog({
 				Title = "Close",
 				Content = "Are you sure you want to unload the interface?",
@@ -2981,10 +3067,9 @@ Components.TitleBar = (function()
 				},
 			})
 		end)
-		TitleBar.MaxButton = BarButton(Components.Assets.Max, UDim2.new(1, -40, 0, 4), TitleBar.Frame, function()
+		TitleBar.MaxButton = BarButton(ResolveIcon("maximize") or Components.Assets.Max, UDim2.new(1, -40, 0, 4), TitleBar.Frame, function()
 			Config.Window.Maximize(not Config.Window.Maximized)
 		end)
-		TitleBar.MinButton = BarButton(Components.Assets.Min, UDim2.new(1, -80, 0, 4), TitleBar.Frame, function()
 			Library.Window:Minimize()
 		end)
 
@@ -6664,14 +6749,14 @@ local MinimizeButton = New("TextButton", {
 	ZIndex = 999999999,
 }, {
 	New("UIPadding", {
-		PaddingBottom = UDim.new(0, 8),
-		PaddingLeft = UDim.new(0, 8),
-		PaddingRight = UDim.new(0, 8),
-		PaddingTop = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, 10),
+		PaddingLeft = UDim.new(0, 10),
+		PaddingRight = UDim.new(0, 10),
+		PaddingTop = UDim.new(0, 10),
 	}),
 	New("ImageLabel", {
 		Name = "Icon",
-		Image = "rbxassetid://10734897102", -- Moon icon for toggle
+		Image = ResolveIcon("moon") or "rbxassetid://10734897102",
 		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundTransparency = 1,
 		ImageColor3 = Color3.fromRGB(255, 255, 255),
@@ -6685,19 +6770,24 @@ local MinimizeButton = New("TextButton", {
 
 local Minimizer
 
--- Floating Toggle UI - Rounded corners (20px), thin borders, AMOLED style
-local MinimizerSize = Mobile and UDim2.new(0, 60, 0, 60) or UDim2.new(0, 50, 0, 50)
-local MinimizerPos = UDim2.new(0.85, 0, 0.85, 0) -- Bottom right corner
+-- Floating Toggle UI - Mobile Responsive & Draggable
+-- Auto-detect screen size for responsive positioning
+local ScreenSize = workspace.CurrentCamera.ViewportSize
+local IsMobile = ScreenSize.X < 800 or UserInputService.TouchEnabled
+
+-- Responsive sizing: bigger on mobile, smaller on desktop
+local MinimizerSize = IsMobile and UDim2.new(0, 70, 0, 70) or UDim2.new(0, 55, 0, 55)
+local MinimizerPos = UDim2.new(0.9, -20, 0.9, -20) -- Bottom right with padding
 
 Minimizer = New("Frame", {
 	Parent = GUI,
+	Name = "FluentFloatingToggle",
 	Size = MinimizerSize,
 	Position = MinimizerPos,
 	BackgroundTransparency = 1,
 	ZIndex = 999999999,
 	Visible = true,
-	Active = true,
-	Draggable = true,
+	Active = true, -- Enables input
 },
 {
 	-- Main background with AMOLED black
@@ -6705,35 +6795,122 @@ Minimizer = New("Frame", {
 		Name = "Background",
 		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 		Size = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 0.1,
+		BackgroundTransparency = 0.05,
 		BorderSizePixel = 0,
+		Active = true,
 	}, {
 		-- Corner radius 20
 		New("UICorner", {
 			CornerRadius = UDim.new(0, 20),
 		}),
-		-- Thin border stroke
+		-- Thin border stroke - subtle
 		New("UIStroke", {
-			Color = Color3.fromRGB(40, 40, 40),
-			Thickness = 1.5,
-			Transparency = 0.3,
+			Color = Color3.fromRGB(60, 60, 60),
+			Thickness = 1,
+			Transparency = 0.4,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 		}),
-		-- Inner glow effect when active
+		-- Shadow effect
+		New("ImageLabel", {
+			Name = "Shadow",
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 8, 1, 8),
+			Position = UDim2.new(0, -4, 0, -4),
+			Image = "rbxassetid://131604521937076", -- Shadow asset
+			ImageColor3 = Color3.fromRGB(0, 0, 0),
+			ImageTransparency = 0.6,
+			ScaleType = Enum.ScaleType.Slice,
+			SliceCenter = Rect.new(10, 10, 118, 118),
+			ZIndex = -1,
+		}),
+		-- Inner subtle glow
 		New("Frame", {
 			Name = "Glow",
 			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-			Size = UDim2.new(1, -4, 1, -4),
-			Position = UDim2.new(0, 2, 0, 2),
-			BackgroundTransparency = 0.95,
+			Size = UDim2.new(1, -6, 1, -6),
+			Position = UDim2.new(0, 3, 0, 3),
+			BackgroundTransparency = 0.97,
 			BorderSizePixel = 0,
 		}, {
 			New("UICorner", {
-				CornerRadius = UDim.new(0, 18),
+				CornerRadius = UDim.new(0, 17),
 			}),
 		}),
 		MinimizeButton
 	})
 })
+
+-- Enhanced Drag System - Works on both Mobile and PC
+local Dragging = false
+local DragStart = nil
+local StartPos = nil
+local DragConnection1, DragConnection2, DragConnection3 = nil, nil, nil
+
+local function UpdateDrag(input)
+	if not Dragging then return end
+	local delta = input.Position - DragStart
+	local newPosition = UDim2.new(
+		StartPos.X.Scale, 
+		StartPos.X.Offset + delta.X,
+		StartPos.Y.Scale, 
+		StartPos.Y.Offset + delta.Y
+	)
+	Minimizer.Position = newPosition
+end
+
+-- Touch/Mouse Start
+Minimizer.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+	   input.UserInputType == Enum.UserInputType.Touch then
+		Dragging = true
+		DragStart = input.Position
+		StartPos = Minimizer.Position
+		
+		-- Visual feedback
+		Tween(Minimizer:FindFirstChild("Background"), 0.1, {BackgroundTransparency = 0.15})
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				Dragging = false
+				Tween(Minimizer:FindFirstChild("Background"), 0.1, {BackgroundTransparency = 0.05})
+			end
+		end)
+	end
+end)
+
+-- Touch/Mouse Move
+Minimizer.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or
+	   input.UserInputType == Enum.UserInputType.Touch then
+		UpdateDrag(input)
+	end
+end)
+
+-- Global input tracking for smooth drag
+RunService.RenderStepped:Connect(function()
+	if Dragging then
+		local input = UserInputService:GetMouseLocation()
+		if input then
+			-- Keep button within screen bounds
+			local screenSize = workspace.CurrentCamera.ViewportSize
+			local absPos = Minimizer.AbsolutePosition
+			local absSize = Minimizer.AbsoluteSize
+			
+			-- Boundary checks (optional, keeps button on screen)
+			if absPos.X < 0 then
+				Minimizer.Position = UDim2.new(0, 0, Minimizer.Position.Y.Scale, Minimizer.Position.Y.Offset)
+			elseif absPos.X + absSize.X > screenSize.X then
+				Minimizer.Position = UDim2.new(0, screenSize.X - absSize.X, Minimizer.Position.Y.Scale, Minimizer.Position.Y.Offset)
+			end
+			
+			if absPos.Y < 0 then
+				Minimizer.Position = UDim2.new(Minimizer.Position.X.Scale, Minimizer.Position.X.Offset, 0, 0)
+			elseif absPos.Y + absSize.Y > screenSize.Y then
+				Minimizer.Position = UDim2.new(Minimizer.Position.X.Scale, Minimizer.Position.X.Offset, 0, screenSize.Y - absSize.Y)
+			end
+		end
+	end
+end)
 
 Creator.AddSignal(Minimizer.InputBegan, function(Input)
 	if
